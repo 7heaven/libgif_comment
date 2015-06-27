@@ -21,7 +21,9 @@ extern "C" {
 #include <stddef.h>
 #include <stdbool.h>
 
+//GIF文件头 （GIF三个字符  这边给出GIFVER是为了方便把紧跟在GIF字符后面的版本一起做判断）
 #define GIF_STAMP "GIFVER"          /* First chars in file - GIF stamp.  */
+//长度减一 是为了去掉后面跟随的a （87 和 89 版本都是a所以做版本判断的时候无意义s）
 #define GIF_STAMP_LEN sizeof(GIF_STAMP) - 1
 #define GIF_VERSION_POS 3           /* Version first character in stamp. */
 #define GIF87_STAMP "GIF87a"        /* First chars in file - GIF stamp.  */
@@ -33,10 +35,12 @@ typedef unsigned char GifByteType;
 typedef unsigned int GifPrefixType;
 typedef int GifWord;
 
+//GIF单个像素的颜色 (红绿蓝 GIF不支持透明 所有没有透明通道)
 typedef struct GifColorType {
     GifByteType Red, Green, Blue;
 } GifColorType;
 
+//GIF的ColorMap 也就是颜色空间 (为了节省空间 所有像素的颜色都是以索引的方式储存的  索引指向的就是颜色空间中真正颜色的位置, 需要注意的是GIF有一个全局的颜色空间 但是每个帧都可以有独立的局部颜色空间 给每一帧单独使用)
 typedef struct ColorMapObject {
     int ColorCount;
     int BitsPerPixel;
@@ -44,12 +48,15 @@ typedef struct ColorMapObject {
     GifColorType *Colors;    /* on malloc(3) heap */
 } ColorMapObject;
 
+//每一帧的图像描述块 包括单帧的坐标 和宽高（GIF 允许单一个帧的大小小于GIF本身的分辨率， 以节省空间）
 typedef struct GifImageDesc {
     GifWord Left, Top, Width, Height;   /* Current image dimensions. */
     bool Interlace;                     /* Sequential/Interlaced lines. */
     ColorMapObject *ColorMap;           /* The local color map */
 } GifImageDesc;
 
+
+//所有Extension块的定义
 typedef struct ExtensionBlock {
     int ByteCount;
     GifByteType *Bytes; /* on malloc(3) heap */
@@ -68,6 +75,7 @@ typedef struct SavedImage {
     ExtensionBlock *ExtensionBlocks; /* Extensions before image */    
 } SavedImage;
 
+//解码完成的GIF数据储存用的struct 也包含了一些解码时的缓存相关的对象
 typedef struct GifFileType {
     GifWord SWidth, SHeight;         /* Size of virtual canvas */
     GifWord SColorResolution;        /* How many colors can we generate? */
@@ -105,7 +113,7 @@ typedef int (*OutputFunc) (GifFileType *, const GifByteType *, int);
 /******************************************************************************
  GIF89 structures
 ******************************************************************************/
-
+//Graphics Control Block 这只有在89a版本才有 是和动画有关的块 包括每一帧的呈现模式 （比如把本帧以外的区域按背景色处理 或者 保留上一帧的颜色等），每帧的delay
 typedef struct GraphicsControlBlock {
     int DisposalMode;
 #define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
@@ -178,6 +186,8 @@ int EGifPutCodeNext(GifFileType *GifFile,
 /* Main entry points */
 GifFileType *DGifOpenFileName(const char *GifFileName, int *Error);
 GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
+
+//这是Gif解码的方法 整个Gif解析的流程都在这方法里面发生
 int DGifSlurp(GifFileType * GifFile);
 GifFileType *DGifOpen(void *userPtr, InputFunc readFunc, int *Error);    /* new one (TVT) */
     int DGifCloseFile(GifFileType * GifFile, int *ErrorCode);
